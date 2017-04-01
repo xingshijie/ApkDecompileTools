@@ -31,6 +31,5 @@ while [ -h "$PRG" ] ; do
 done
 PRGDIR=`dirname "$PRG"`
 #
-echo "fadsfdasf"
 # call d2j_invoke.sh to setup java environment
 "$PRGDIR/d2j_invoke.sh" "com.googlecode.dex2jar.tools.Dex2jarCmd" "$@"

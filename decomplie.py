@@ -1,62 +1,43 @@
-import fnmatch
-import os
-import glob
-import Queue
+# coding=utf-8
 import subprocess
-import threading
+from os import path
+import glob
 
-package = 'DemoForchenganyanshi_2.0'
-javapath = 'apk/' + package + '/java'
-if not os.path.exists(javapath):
-    os.makedirs(javapath)
-q = Queue.Queue()
+apkPath = "kongzhongjr.apk"
+apkOutput = "output"
+decompiler = ""
 
-for root, dirnames, filenames in os.walk('DemoForchenganyanshi_2.0'):
-    for filename in fnmatch.filter(filenames, '*.class'):
-        if '$' not in filename:
-            q.put(os.path.join(root, filename))
+# use apkTools
+subprocess.call(("java -jar ./lib/apktool.jar d " + apkPath + " -s " + "-o " + apkOutput).split(" "))
 
+dexFiles = glob.glob1(apkOutput, '*.dex')
+jarFilePaths = []
+for dexFile in dexFiles:
+    # use dex2jar
+    jarFilePath = path.join(apkOutput, path.splitext(path.basename(dexFile))[0] + '.jar')
+    jarFilePaths.append(jarFilePath)
+    subprocess.call(("lib/dex2jar-2.0/d2j-dex2jar.sh " + path.join(apkOutput, dexFile)
+                     + " -o " + jarFilePath).split(" "))
 
-print q
-
-# classes = glob.glob(package + '/**/*.class')
-# for file in classes:
-#     q.put(file)
-
-
-def decomplie_class():
-    while True:
-        file = q.get()
-        relpath = os.path.relpath(file, 'DemoForchenganyanshi_2.0/')
-        if '$' in os.path.basename(file):
-            pass
-        else:
-            tarpath = 'cfr-decompile-demo-apk/java/' + os.path.dirname(relpath)
-            if os.path.exists(tarpath + '/' + os.path.splitext(os.path.basename(file))[0] + '.java'):
-                print(tarpath + '/' + os.path.basename(file) + 'exists')
-            else:
-                if not os.path.exists(tarpath):
-                    try:
-                        os.makedirs(tarpath)
-                    except:
-                        pass
-
-                nested_class = []
-                for file2 in glob.glob(os.path.dirname(file) + '/*.class'):
-                    if os.path.basename(file2).startswith(os.path.basename(file)[0] + '$'):
-                        nested_class.append(file2)
-                commend = ('java -jar cfr.jar'.split(' '))
-                commend.append(file)
-                commend.append('--outputdir')
-                commend.append(tarpath)
-                subprocess.call(commend)
-                print file
-        q.task_done()
+# todo add more decompiler
+# use java decompiler
 
 
-for i in range(8):
-    t = threading.Thread(target=decomplie_class)
-    t.daemon = True  # thread dies when main thread (only non-daemon thread) exits.
-    t.start()
+#   JDCore (very fast)
+#   CFR (very good and well-supported decompiler for Java 8)
+#   Jadx, fast and with Android support
+#   Procyon
+#   Fernflower
+#   JAD (very fast, but outdated)
+def cfr(jar_file_path, output_path):
+    subprocess.call(("java -jar lib/cfr.jar " + jar_file_path + " --outputdir " + output_path).split(" "))
 
-q.join()
+
+# 效率慢，出错多，还会卡死，最好每个class分别编译，就不会死
+def fernflower(jar_file_path, output_path):
+    subprocess.call(("java -jar lib/fernflower.jar " + jar_file_path + " " + output_path).split(" "))
+
+
+for jarFilePath in jarFilePaths:
+    cfr(jarFilePath, path.join(apkOutput, 'java'))
+
